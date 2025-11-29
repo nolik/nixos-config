@@ -156,6 +156,23 @@
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
+
+  # Cron jobs
+  systemd.timers.shutdown-at-23 = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "23:00";
+    };
+  };
+
+  systemd.services.shutdown-at-23 = {
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "/run/current-system/sw/bin/systemctl poweroff";
+    };
+  };
+
+
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 ];
   networking.firewall.allowPing = true;
