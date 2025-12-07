@@ -21,7 +21,7 @@
   boot.loader.grub.device = "/dev/sda";
   boot.loader.grub.useOSProber = true;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "nix-server"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -70,6 +70,9 @@
   # Configure console keymap
   console.keyMap = "us";
 
+  # samba group
+  users.groups.samba = {};
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.nolik = {
     isNormalUser = true;
@@ -78,10 +81,8 @@
     packages = with pkgs; [];
   };
 
-
-  sops.secrets.smb = {
-  };
   sops.secrets.smb.neededForUsers = true;
+  sops.secrets.smb-plaintext.neededForUsers = true;
   users.users.smb = {
     description = "Write-access to samba media shares";
     # Add this user to a group with permission to access the expected files 
@@ -124,7 +125,7 @@
         #"use sendfile" = "yes";
         #"max protocol" = "smb2";
         # note: localhost is the ipv6 localhost ::1
-        "hosts allow" = "192.168.0. 127.0.0.1 localhost";
+        "hosts allow" = "192.168.10. 127.0.0.1 localhost";
         "hosts deny" = "0.0.0.0/0";
         "guest account" = "nobody";
         "map to guest" = "bad user";
@@ -162,30 +163,19 @@
   # pulling the user/samba password from a file then it will be updated during
   # nixos-rebuild. Again, in this example we're using sops-nix with a "samba" entry
   # to avoid cleartext password, but this could be replaced with a static path.
-  # system.activationScripts = {
-  #   # The "init_smbpasswd" script name is arbitrary, but a useful label for tracking
-  #   # failed scripts in the build output. An absolute path to smbpasswd is necessary
-  #   # as it is not in $PATH in the activation script's environment. The password
-  #   # is repeated twice with newline characters as smbpasswd requires a password
-  #   # confirmation even in non-interactive mode where input is piped in through stdin. 
-  #   init_smbpasswd.text = ''
-  #     /run/current-system/sw/bin/printf "$(/run/current-system/sw/bin/cat ${config.sops.secrets.smb.path})\n
-  #     $(/run/current-system/sw/bin/cat ${config.sops.secrets.smb.path})\n" | /run/current-system/sw/bin/smbpasswd -sa smb
-  #   '';
-  # };
-
-
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
+  system.activationScripts = {
+    # The "init_smbpasswd" script name is arbitrary, but a useful label for tracking
+    # failed scripts in the build output. An absolute path to smbpasswd is necessary
+    # as it is not in $PATH in the activation script's environment. The password
+    # is repeated twice with newline characters as smbpasswd requires a password
+    # confirmation even in non-interactive mode where input is piped in through stdin. 
+    init_smbpasswd.text = ''
+      /run/current-system/sw/bin/printf "$(/run/current-system/sw/bin/cat ${config.sops.secrets.smb-plaintext.path})\n$(/run/current-system/sw/bin/cat ${config.sops.secrets.smb-plaintext.path})\n" | /run/current-system/sw/bin/smbpasswd -sa smb
+    '';
+  };
 
   # List services that you want to enable:
    services.logind.settings.Login = {
-#   services.logind.extraConfig = ''
     # don’t shutdown when power button is short-pressed
       HandleLidSwitch = "ignore";
       HandleLidSwitchDocked = "ignore";
@@ -214,7 +204,7 @@
 
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 ];
+  networking.firewall.allowedTCPPorts = [ 22 445 ];
   networking.firewall.allowPing = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
@@ -228,33 +218,4 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.05"; # Did you read the comment?
 
-  ### testing
- 
-  # sops.secrets.smb = {
-  #   owner = "sometestservice";
-  # };
-   
-  # systemd.services."sometestservice" = {
-  #   script = ''
-  #       echo "
-  #       Hey bro! I'm a service, and imma send this secure password:
-  #       $(cat ${config.sops.secrets.smb.path})
-  #       located in:
-  #       ${config.sops.secrets.smb.path}
-  #       to database and hack the mainframe
-  #       " > /var/lib/sometestservice/testfile
-  #     '';
-  #   serviceConfig = {
-  #     User = "sometestservice";
-  #     WorkingDirectory = "/var/lib/sometestservice";
-  #   };
-  # };
-
-  # users.users.sometestservice = {
-  #   home = "/var/lib/sometestservice";
-  #   createHome = true;
-  #   isSystemUser = true;
-  #   group = "sometestservice";
-  # };
-  # users.groups.sometestservice = { };
 }
