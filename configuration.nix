@@ -10,6 +10,12 @@
       ./hardware-configuration.nix
     ];
 
+  #sops
+  sops.defaultSopsFile = ./secrets/secrets.yaml;
+  sops.defaultSopsFormat = "yaml";
+  
+  sops.age.keyFile = "/home/nolik/.config/sops/age/keys.txt";
+  
   # Bootloader.
   boot.loader.grub.enable = true;
   boot.loader.grub.device = "/dev/sda";
@@ -68,8 +74,23 @@
   users.users.nolik = {
     isNormalUser = true;
     description = "nolik";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "samba"];
     packages = with pkgs; [];
+  };
+
+
+  sops.secrets.smb = {
+  };
+  sops.secrets.smb.neededForUsers = true;
+  users.users.smb = {
+    description = "Write-access to samba media shares";
+    # Add this user to a group with permission to access the expected files 
+    extraGroups = [ "samba" ];
+    # Password can be set in clear text with a literal string or from a file.
+    # Using sops-nix we can use the same file so that the system user and samba
+    # user share the same credential (if desired).
+    hashedPasswordFile = config.sops.secrets.smb.path;
+    isNormalUser = true;
   };
 
   # Enable automatic login for the user.
@@ -89,14 +110,16 @@
     # wget
   ];
 
+  environment.variables.EDITOR = "hx";
+
   services.samba = {
     enable = true;
     openFirewall = true;
     settings = {
       global = {
         "workgroup" = "WORKGROUP";
-        "server string" = "smbnix";
-        "netbios name" = "smbnix";
+        "server string" = "smb";
+        "netbios name" = "smb";
         "security" = "user";
         #"use sendfile" = "yes";
         #"max protocol" = "smb2";
@@ -113,9 +136,9 @@
         "guest ok" = "no";
         "create mask" = "0644";
         "directory mask" = "0755";
-        "force user" = "nolik";
-        "force group" = "wheel";
-        "valid user" = "nolik";
+        "force user" = "smb";
+        "force group" = "samba";
+        "valid user" = "smb";
       };
     };
   };
@@ -134,6 +157,23 @@
     enable = true;
     openFirewall = true;
   };
+
+  # Activation scripts run every time nixos switches build profiles. So if you're
+  # pulling the user/samba password from a file then it will be updated during
+  # nixos-rebuild. Again, in this example we're using sops-nix with a "samba" entry
+  # to avoid cleartext password, but this could be replaced with a static path.
+  # system.activationScripts = {
+  #   # The "init_smbpasswd" script name is arbitrary, but a useful label for tracking
+  #   # failed scripts in the build output. An absolute path to smbpasswd is necessary
+  #   # as it is not in $PATH in the activation script's environment. The password
+  #   # is repeated twice with newline characters as smbpasswd requires a password
+  #   # confirmation even in non-interactive mode where input is piped in through stdin. 
+  #   init_smbpasswd.text = ''
+  #     /run/current-system/sw/bin/printf "$(/run/current-system/sw/bin/cat ${config.sops.secrets.smb.path})\n
+  #     $(/run/current-system/sw/bin/cat ${config.sops.secrets.smb.path})\n" | /run/current-system/sw/bin/smbpasswd -sa smb
+  #   '';
+  # };
+
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -188,4 +228,33 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.05"; # Did you read the comment?
 
+  ### testing
+ 
+  # sops.secrets.smb = {
+  #   owner = "sometestservice";
+  # };
+   
+  # systemd.services."sometestservice" = {
+  #   script = ''
+  #       echo "
+  #       Hey bro! I'm a service, and imma send this secure password:
+  #       $(cat ${config.sops.secrets.smb.path})
+  #       located in:
+  #       ${config.sops.secrets.smb.path}
+  #       to database and hack the mainframe
+  #       " > /var/lib/sometestservice/testfile
+  #     '';
+  #   serviceConfig = {
+  #     User = "sometestservice";
+  #     WorkingDirectory = "/var/lib/sometestservice";
+  #   };
+  # };
+
+  # users.users.sometestservice = {
+  #   home = "/var/lib/sometestservice";
+  #   createHome = true;
+  #   isSystemUser = true;
+  #   group = "sometestservice";
+  # };
+  # users.groups.sometestservice = { };
 }

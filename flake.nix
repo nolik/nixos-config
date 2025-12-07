@@ -12,7 +12,6 @@
     packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
     packages.x86_64-linux.default = self.packages.x86_64-linux.hello;
 
-        # change `yourhostname` to your actual hostname
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       # customize to your system
       system = "x86_64-linux";
