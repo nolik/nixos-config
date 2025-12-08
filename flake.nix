@@ -12,7 +12,7 @@
     packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
     packages.x86_64-linux.default = self.packages.x86_64-linux.hello;
 
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.nix-server = nixpkgs.lib.nixosSystem {
       # customize to your system
       system = "x86_64-linux";
       modules = [
