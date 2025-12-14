@@ -168,7 +168,6 @@
       "google_translate"
       "met"
       "radio_browser"
-      "shopping_list"
       # Recommended for fast zlib compression
       # https://www.home-assistant.io/integrations/isal
       "isal"
@@ -177,6 +176,42 @@
       # Includes dependencies for a basic setup
       # https://www.home-assistant.io/integrations/default_config/
       default_config = {};
+    };
+
+    extraPackages = python3Packages: with python3Packages; [
+      paho-mqtt
+    ];
+  };
+
+  services.mosquitto = {
+    enable = true;
+    listeners = [
+      {
+        acl = [ "pattern readwrite #" ];
+        omitPasswordAuth = true;
+        settings.allow_anonymous = true;
+      }
+    ];
+  };
+
+  services.zigbee2mqtt = {
+    enable = true;
+    # Use the built-in NixOS module settings
+    settings = {
+      # homeassistant = config.services.home-assistant.enable; # If HA is enabled
+      permit_join = true; # Or false, for security
+      mqtt = {
+        base_topic = "zigbee2mqtt";
+        server = "mqtt://localhost:1883"; # Or your MQTT server's address
+      };
+      serial = {
+        port = "/dev/ttyUSB0"; # Change to your coordinator's port (e.g., /dev/ttyUSB0)
+        adapter = "zstack"; # Or "deconz", "zha", depending on your device
+      };
+      # frontend = {
+      #   enable = true;
+      #   port = 8080;
+      # };
     };
   };
 
@@ -225,7 +260,7 @@
 
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 445 config.services.home-assistant.config.http.server_port ];
+  networking.firewall.allowedTCPPorts = [ 22 445 config.services.home-assistant.config.http.server_port 1883 8080 ];
   networking.firewall.allowPing = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
