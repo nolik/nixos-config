@@ -159,6 +159,27 @@
     openFirewall = true;
   };
 
+
+  services.home-assistant = {
+    enable = true;
+    extraComponents = [
+      # Components required to complete the onboarding
+      "analytics"
+      "google_translate"
+      "met"
+      "radio_browser"
+      "shopping_list"
+      # Recommended for fast zlib compression
+      # https://www.home-assistant.io/integrations/isal
+      "isal"
+    ];
+    config = {
+      # Includes dependencies for a basic setup
+      # https://www.home-assistant.io/integrations/default_config/
+      default_config = {};
+    };
+  };
+
   # Activation scripts run every time nixos switches build profiles. So if you're
   # pulling the user/samba password from a file then it will be updated during
   # nixos-rebuild. Again, in this example we're using sops-nix with a "samba" entry
@@ -204,7 +225,7 @@
 
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 445 ];
+  networking.firewall.allowedTCPPorts = [ 22 445 config.services.home-assistant.config.http.server_port ];
   networking.firewall.allowPing = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
