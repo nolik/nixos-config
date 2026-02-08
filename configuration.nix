@@ -108,12 +108,13 @@
     # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     helix    
     git
-    # wget
+    tmux
+    rtorrent
   ];
 
   environment.variables.EDITOR = "hx";
 
-  services.samba = {
+ services.samba = {
     enable = true;
     openFirewall = true;
     settings = {
@@ -244,14 +245,14 @@
 
 
   # Cron jobs
-  systemd.timers.shutdown-at-23 = {
+  systemd.timers.shutdown-at-night = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnCalendar = "23:00";
+      OnCalendar = "01:00";
     };
   };
 
-  systemd.services.shutdown-at-23 = {
+  systemd.services.shutdown-at-night = {
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "/run/current-system/sw/bin/systemctl poweroff";
