@@ -79,6 +79,9 @@
     description = "nolik";
     extraGroups = [ "networkmanager" "wheel" "samba"];
     packages = with pkgs; [];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKR46iLT6D2+pCDU8bWoQfii3khEDoEzcADIEyWZc6wx nolik@r2d2"
+    ];
   };
 
   sops.secrets.smb.neededForUsers = true;
@@ -168,7 +171,7 @@
       "analytics"
       "google_translate"
       "met"
-      "radio_browser"
+      "telegram_bot"
       # Recommended for fast zlib compression
       # https://www.home-assistant.io/integrations/isal
       "isal"
@@ -176,6 +179,7 @@
     config = {
       # Includes dependencies for a basic setup
       # https://www.home-assistant.io/integrations/default_config/
+      "automation" = "!include automations.yaml";
       default_config = {};
     };
 
@@ -209,10 +213,10 @@
         port = "/dev/ttyUSB0"; # Change to your coordinator's port (e.g., /dev/ttyUSB0)
         adapter = "zstack"; # Or "deconz", "zha", depending on your device
       };
-      # frontend = {
-      #   enable = true;
-      #   port = 8080;
-      # };
+      frontend = {
+        enable = true;
+        port = 8080;
+      };
     };
   };
 
@@ -250,6 +254,7 @@
     timerConfig = {
       OnCalendar = "01:00";
     };
+    enable = true;
   };
 
   systemd.services.shutdown-at-night = {
@@ -260,6 +265,8 @@
   };
 
 
+  # temp
+  programs.nix-ld.enable = true;
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 445 config.services.home-assistant.config.http.server_port 1883 8080 ];
   networking.firewall.allowPing = true;
